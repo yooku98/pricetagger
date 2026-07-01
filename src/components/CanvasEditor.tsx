@@ -56,7 +56,7 @@ export function CanvasEditor() {
         <button
           onClick={() => rotateItem(item.id, 'ccw')}
           title="Rotate left"
-          className="flex h-8 w-8 items-center justify-center rounded-md border border-neutral-700 bg-neutral-900/90 text-neutral-300 hover:border-neutral-500 hover:text-white"
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-neutral-700 bg-neutral-900/90 text-neutral-300 hover:border-neutral-500 hover:text-white lg:h-8 lg:w-8"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-4 w-4">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 15L4 10m0 0l5-5m-5 5h11a4 4 0 010 8h-1" />
@@ -65,14 +65,14 @@ export function CanvasEditor() {
         <button
           onClick={() => rotateItem(item.id, 'cw')}
           title="Rotate right"
-          className="flex h-8 w-8 items-center justify-center rounded-md border border-neutral-700 bg-neutral-900/90 text-neutral-300 hover:border-neutral-500 hover:text-white"
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-neutral-700 bg-neutral-900/90 text-neutral-300 hover:border-neutral-500 hover:text-white lg:h-8 lg:w-8"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-4 w-4">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l5-5m0 0l-5-5m5 5H9a4 4 0 000 8h1" />
           </svg>
         </button>
       </div>
-      <div className="shadow-2xl" style={{ width: displayW, height: displayH }}>
+      <div className="shadow-2xl" style={{ width: displayW, height: displayH, touchAction: 'none' }}>
         <Stage width={displayW} height={displayH} scaleX={scale} scaleY={scale}>
           <Layer>
             <Group
