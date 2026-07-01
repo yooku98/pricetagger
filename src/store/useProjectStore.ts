@@ -1,0 +1,188 @@
+import { create } from 'zustand'
+import { v4 as uuid } from 'uuid'
+import type { Item, Project, Tag, TagStyle, Template, WatermarkConfig } from '../types'
+import { TEMPLATE_PRESETS } from '../templates/presets'
+
+function createDefaultTag(style: TagStyle): Tag {
+  return {
+    id: uuid(),
+    type: 'price',
+    text: '',
+    x: 20,
+    y: 82,
+    ...style,
+  }
+}
+
+function createProject(): Project {
+  return {
+    id: uuid(),
+    createdAt: Date.now(),
+    items: [],
+  }
+}
+
+function loadImage(file: File): Promise<{ url: string; width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => resolve({ url, width: img.naturalWidth, height: img.naturalHeight })
+    img.onerror = () => reject(new Error(`Failed to load image: ${file.name}`))
+    img.src = url
+  })
+}
+
+interface ProjectState {
+  project: Project
+  selectedItemId: string | null
+  activeTemplateId: string | null
+  watermark: WatermarkConfig
+
+  addImages: (files: File[]) => Promise<void>
+  removeItem: (itemId: string) => void
+  clearProject: () => void
+  selectItem: (itemId: string) => void
+
+  updateTag: (itemId: string, tagId: string, updates: Partial<Tag>) => void
+  setPriceText: (itemId: string, text: string) => void
+
+  applyStyleToAll: (style: TagStyle) => void
+  applyStyleToOne: (itemId: string, style: TagStyle) => void
+  selectTemplate: (template: Template) => void
+
+  updateWatermark: (updates: Partial<WatermarkConfig>) => void
+  toggleWatermark: (enabled: boolean) => void
+}
+
+export const useProjectStore = create<ProjectState>((set, get) => ({
+  project: createProject(),
+  selectedItemId: null,
+  activeTemplateId: TEMPLATE_PRESETS[0].id,
+  watermark: {
+    enabled: false,
+    text: 'Your Brand',
+    x: 85,
+    y: 90,
+    fontSize: 20,
+    color: '#ffffff',
+    backgroundColor: '#000000',
+    backgroundOpacity: 0.5,
+  },
+
+  addImages: async (files) => {
+    const template = TEMPLATE_PRESETS.find((t) => t.id === get().activeTemplateId) ?? TEMPLATE_PRESETS[0]
+    const newItems: Item[] = []
+    for (const file of files) {
+      try {
+        const { url, width, height } = await loadImage(file)
+        const item: Item = {
+          id: uuid(),
+          name: file.name,
+          imageFile: file,
+          imageUrl: url,
+          imageWidth: width,
+          imageHeight: height,
+          tags: [createDefaultTag(template.defaultTagStyle)],
+        }
+        newItems.push(item)
+      } catch (err) {
+        console.error(err)
+      }
+    }
+    set((state) => {
+      const items = [...state.project.items, ...newItems]
+      return {
+        project: { ...state.project, items },
+        selectedItemId: state.selectedItemId ?? newItems[0]?.id ?? null,
+      }
+    })
+  },
+
+  removeItem: (itemId) => {
+    set((state) => {
+      const item = state.project.items.find((i) => i.id === itemId)
+      if (item) URL.revokeObjectURL(item.imageUrl)
+      const items = state.project.items.filter((i) => i.id !== itemId)
+      const selectedItemId =
+        state.selectedItemId === itemId ? (items[0]?.id ?? null) : state.selectedItemId
+      return { project: { ...state.project, items }, selectedItemId }
+    })
+  },
+
+  clearProject: () => {
+    for (const item of get().project.items) URL.revokeObjectURL(item.imageUrl)
+    set({ project: createProject(), selectedItemId: null })
+  },
+
+  selectItem: (itemId) => set({ selectedItemId: itemId }),
+
+  updateTag: (itemId, tagId, updates) => {
+    set((state) => ({
+      project: {
+        ...state.project,
+        items: state.project.items.map((item) =>
+          item.id !== itemId
+            ? item
+            : {
+                ...item,
+                tags: item.tags.map((tag) => (tag.id === tagId ? { ...tag, ...updates } : tag)),
+              },
+        ),
+      },
+    }))
+  },
+
+  setPriceText: (itemId, text) => {
+    set((state) => ({
+      project: {
+        ...state.project,
+        items: state.project.items.map((item) =>
+          item.id !== itemId
+            ? item
+            : {
+                ...item,
+                tags: item.tags.map((tag) => (tag.type === 'price' ? { ...tag, text } : tag)),
+              },
+        ),
+      },
+    }))
+  },
+
+  applyStyleToAll: (style) => {
+    set((state) => ({
+      project: {
+        ...state.project,
+        items: state.project.items.map((item) => ({
+          ...item,
+          tags: item.tags.map((tag) => (tag.type === 'price' ? { ...tag, ...style } : tag)),
+        })),
+      },
+    }))
+  },
+
+  selectTemplate: (template) => {
+    set({ activeTemplateId: template.id })
+    const selectedId = get().selectedItemId
+    if (!selectedId) return
+    get().applyStyleToOne(selectedId, template.defaultTagStyle)
+  },
+
+  updateWatermark: (updates) => set((state) => ({ watermark: { ...state.watermark, ...updates } })),
+  toggleWatermark: (enabled) => set((state) => ({ watermark: { ...state.watermark, enabled } })),
+
+  applyStyleToOne: (itemId: string, style: TagStyle) => {
+    set((state) => ({
+      project: {
+        ...state.project,
+        items: state.project.items.map((item) =>
+          item.id !== itemId
+            ? item
+            : {
+                ...item,
+                tags: item.tags.map((tag) => (tag.type === 'price' ? { ...tag, ...style } : tag)),
+              },
+        ),
+      },
+    }))
+  },
+}))
