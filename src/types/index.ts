@@ -14,7 +14,7 @@ export interface Tag {
   backgroundColor: string
   backgroundOpacity: number // 0-1
   shape: TagShape
-  rotation?: number
+  rotation: number // degrees, free-form
 }
 
 export type Rotation = 0 | 90 | 180 | 270

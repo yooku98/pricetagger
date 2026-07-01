@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useProjectStore } from './store/useProjectStore'
 import { UploadScreen } from './components/UploadScreen'
 import { ImageList } from './components/ImageList'
@@ -12,7 +12,17 @@ type MobilePanel = 'none' | 'prices' | 'style'
 function App() {
   const hasItems = useProjectStore((s) => s.project.items.length > 0)
   const clearProject = useProjectStore((s) => s.clearProject)
+  const hydrated = useProjectStore((s) => s.hydrated)
+  const hydrate = useProjectStore((s) => s.hydrate)
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('none')
+
+  useEffect(() => {
+    void hydrate()
+  }, [hydrate])
+
+  if (!hydrated) {
+    return <div className="flex h-dvh flex-col bg-neutral-950 text-neutral-100" />
+  }
 
   return (
     <div className="flex h-dvh flex-col bg-neutral-950 text-neutral-100">

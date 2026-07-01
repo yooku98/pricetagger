@@ -18,15 +18,19 @@ function loadHTMLImage(url: string): Promise<HTMLImageElement> {
 function drawTag(ctx: CanvasRenderingContext2D, tag: Tag, imageWidth: number, imageHeight: number, imageScale: number, offsetX: number, offsetY: number) {
   if (!tag.text) return
   const box = computeTagBox(tag, imageWidth, imageHeight)
-  const left = offsetX + box.left * imageScale
-  const top = offsetY + box.top * imageScale
+  const cx = offsetX + box.centerX * imageScale
+  const cy = offsetY + box.centerY * imageScale
   const w = box.boxWidth * imageScale
   const h = box.boxHeight * imageScale
   const fontSize = tag.fontSize * imageScale
 
+  ctx.save()
+  ctx.translate(cx, cy)
+  ctx.rotate((tag.rotation * Math.PI) / 180)
+
   if (tag.shape !== 'none') {
     ctx.beginPath()
-    buildTagPath(ctx, tag.shape, left, top, w, h)
+    buildTagPath(ctx, tag.shape, -w / 2, -h / 2, w, h)
     ctx.globalAlpha = tag.backgroundOpacity
     ctx.fillStyle = tag.backgroundColor
     ctx.fill()
@@ -37,7 +41,9 @@ function drawTag(ctx: CanvasRenderingContext2D, tag: Tag, imageWidth: number, im
   ctx.fillStyle = tag.color
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(tag.text, left + w / 2, top + h / 2)
+  ctx.fillText(tag.text, 0, 0)
+
+  ctx.restore()
 }
 
 export async function renderItemToCanvas(
@@ -98,6 +104,7 @@ export async function renderItemToCanvas(
       backgroundColor: watermark.backgroundColor,
       backgroundOpacity: watermark.backgroundOpacity,
       shape: 'rect',
+      rotation: 0,
     }
     drawTag(ctx, watermarkTag, item.imageWidth, item.imageHeight, 1, 0, 0)
   }

@@ -129,6 +129,17 @@ export function ControlsPanel() {
           />
         </Field>
 
+        <Field label={`Rotation (${Math.round(tag.rotation)}°)`}>
+          <input
+            type="range"
+            min={-180}
+            max={180}
+            value={tag.rotation}
+            onChange={(e) => updateTag(item.id, tag.id, { rotation: Number(e.target.value) })}
+            className="w-full"
+          />
+        </Field>
+
         <button
           onClick={() =>
             applyStyleToAll({

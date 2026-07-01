@@ -28,24 +28,29 @@ export function TagNode({ tag, imageWidth, imageHeight, onChange }: TagNodeProps
     <>
       <Group
         ref={groupRef}
-        x={box.left}
-        y={box.top}
+        x={box.centerX}
+        y={box.centerY}
+        offsetX={box.boxWidth / 2}
+        offsetY={box.boxHeight / 2}
+        rotation={tag.rotation}
         scaleX={1}
         scaleY={1}
         draggable
         onDragEnd={(e) => {
           const node = e.target
-          const centerX = node.x() + box.boxWidth / 2
-          const centerY = node.y() + box.boxHeight / 2
-          onChange({ x: (centerX / imageWidth) * 100, y: (centerY / imageHeight) * 100 })
+          onChange({ x: (node.x() / imageWidth) * 100, y: (node.y() / imageHeight) * 100 })
         }}
         onTransformEnd={() => {
           const node = groupRef.current
           if (!node) return
           const scale = (node.scaleX() + node.scaleY()) / 2
+          const rotation = node.rotation()
           node.scaleX(1)
           node.scaleY(1)
-          onChange({ fontSize: Math.max(8, Math.round(tag.fontSize * scale)) })
+          onChange({
+            fontSize: Math.max(8, Math.round(tag.fontSize * scale)),
+            rotation: Math.round(rotation),
+          })
         }}
       >
         {tag.shape !== 'none' && (
@@ -77,7 +82,9 @@ export function TagNode({ tag, imageWidth, imageHeight, onChange }: TagNodeProps
       </Group>
       <Transformer
         ref={trRef}
-        rotateEnabled={false}
+        rotateEnabled
+        rotationSnaps={[0, 45, 90, 135, 180, 225, 270, 315]}
+        rotationSnapTolerance={5}
         enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
         keepRatio
         boundBoxFunc={(oldBox, newBox) => (newBox.width < 24 || newBox.height < 16 ? oldBox : newBox)}

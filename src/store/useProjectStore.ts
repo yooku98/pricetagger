@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import type { Item, Project, Rotation, Tag, TagStyle, Template, WatermarkConfig } from '../types'
 import { TEMPLATE_PRESETS } from '../templates/presets'
+import { clearPersistedProject, loadPersistedProject, normalizeRotation, savePersistedProject } from '../lib/persistence'
 
 function createDefaultTag(style: TagStyle): Tag {
   return {
@@ -10,6 +11,7 @@ function createDefaultTag(style: TagStyle): Tag {
     text: '',
     x: 20,
     y: 82,
+    rotation: 0,
     ...style,
   }
 }
@@ -37,7 +39,9 @@ interface ProjectState {
   selectedItemId: string | null
   activeTemplateId: string | null
   watermark: WatermarkConfig
+  hydrated: boolean
 
+  hydrate: () => Promise<void>
   addImages: (files: File[]) => Promise<void>
   removeItem: (itemId: string) => void
   clearProject: () => void
@@ -59,6 +63,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   project: createProject(),
   selectedItemId: null,
   activeTemplateId: TEMPLATE_PRESETS[0].id,
+  hydrated: false,
   watermark: {
     enabled: false,
     text: 'Your Brand',
@@ -68,6 +73,27 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     color: '#ffffff',
     backgroundColor: '#000000',
     backgroundOpacity: 0.5,
+  },
+
+  hydrate: async () => {
+    const saved = await loadPersistedProject()
+    if (saved && saved.items.length > 0) {
+      const items: Item[] = saved.items.map((item) => ({
+        ...item,
+        rotation: normalizeRotation(item.rotation),
+        imageUrl: URL.createObjectURL(item.imageFile),
+        tags: item.tags.map((tag) => ({ ...tag, rotation: tag.rotation ?? 0 })),
+      }))
+      set((state) => ({
+        project: { ...state.project, items },
+        selectedItemId: saved.selectedItemId && items.some((i) => i.id === saved.selectedItemId)
+          ? saved.selectedItemId
+          : (items[0]?.id ?? null),
+        watermark: saved.watermark ?? state.watermark,
+        activeTemplateId: saved.activeTemplateId ?? state.activeTemplateId,
+      }))
+    }
+    set({ hydrated: true })
   },
 
   addImages: async (files) => {
@@ -114,6 +140,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   clearProject: () => {
     for (const item of get().project.items) URL.revokeObjectURL(item.imageUrl)
     set({ project: createProject(), selectedItemId: null })
+    void clearPersistedProject()
   },
 
   selectItem: (itemId) => set({ selectedItemId: itemId }),
@@ -201,3 +228,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }))
   },
 }))
+
+let saveTimeout: ReturnType<typeof setTimeout> | undefined
+useProjectStore.subscribe((state) => {
+  if (!state.hydrated) return
+  clearTimeout(saveTimeout)
+  saveTimeout = setTimeout(() => {
+    void savePersistedProject({
+      items: state.project.items.map(({ imageUrl: _imageUrl, ...rest }) => rest),
+      watermark: state.watermark,
+      activeTemplateId: state.activeTemplateId,
+      selectedItemId: state.selectedItemId,
+    })
+  }, 400)
+})
