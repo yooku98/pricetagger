@@ -46,8 +46,12 @@ export async function renderItemToCanvas(
   preset: ExportPreset,
 ): Promise<HTMLCanvasElement> {
   const img = await loadHTMLImage(item.imageUrl)
+  const isSideways = item.rotation === 90 || item.rotation === 270
+  const boundingWidth = isSideways ? item.imageHeight : item.imageWidth
+  const boundingHeight = isSideways ? item.imageWidth : item.imageHeight
+
   const target = preset === 'original'
-    ? { width: item.imageWidth, height: item.imageHeight }
+    ? { width: boundingWidth, height: boundingHeight }
     : PRESET_DIMENSIONS[preset]
 
   const canvas = document.createElement('canvas')
@@ -58,21 +62,27 @@ export async function renderItemToCanvas(
 
   const imageScale = preset === 'original'
     ? 1
-    : Math.min(target.width / item.imageWidth, target.height / item.imageHeight)
-  const drawnW = item.imageWidth * imageScale
-  const drawnH = item.imageHeight * imageScale
-  const offsetX = (target.width - drawnW) / 2
-  const offsetY = (target.height - drawnH) / 2
+    : Math.min(target.width / boundingWidth, target.height / boundingHeight)
+  const drawnBoundingW = boundingWidth * imageScale
+  const drawnBoundingH = boundingHeight * imageScale
+  const centerX = (target.width - drawnBoundingW) / 2 + drawnBoundingW / 2
+  const centerY = (target.height - drawnBoundingH) / 2 + drawnBoundingH / 2
 
   if (preset !== 'original') {
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, target.width, target.height)
   }
 
-  ctx.drawImage(img, offsetX, offsetY, drawnW, drawnH)
+  ctx.save()
+  ctx.translate(centerX, centerY)
+  ctx.rotate((item.rotation * Math.PI) / 180)
+  ctx.scale(imageScale, imageScale)
+  ctx.translate(-item.imageWidth / 2, -item.imageHeight / 2)
+
+  ctx.drawImage(img, 0, 0, item.imageWidth, item.imageHeight)
 
   for (const tag of item.tags) {
-    drawTag(ctx, tag, item.imageWidth, item.imageHeight, imageScale, offsetX, offsetY)
+    drawTag(ctx, tag, item.imageWidth, item.imageHeight, 1, 0, 0)
   }
 
   if (watermark.enabled) {
@@ -89,8 +99,10 @@ export async function renderItemToCanvas(
       backgroundOpacity: watermark.backgroundOpacity,
       shape: 'rect',
     }
-    drawTag(ctx, watermarkTag, item.imageWidth, item.imageHeight, imageScale, offsetX, offsetY)
+    drawTag(ctx, watermarkTag, item.imageWidth, item.imageHeight, 1, 0, 0)
   }
+
+  ctx.restore()
 
   return canvas
 }

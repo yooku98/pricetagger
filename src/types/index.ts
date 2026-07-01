@@ -17,6 +17,8 @@ export interface Tag {
   rotation?: number
 }
 
+export type Rotation = 0 | 90 | 180 | 270
+
 export interface Item {
   id: string
   name: string
@@ -24,6 +26,7 @@ export interface Item {
   imageUrl: string
   imageWidth: number
   imageHeight: number
+  rotation: Rotation
   tags: Tag[]
 }
 

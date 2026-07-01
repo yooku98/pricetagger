@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
-import type { Item, Project, Tag, TagStyle, Template, WatermarkConfig } from '../types'
+import type { Item, Project, Rotation, Tag, TagStyle, Template, WatermarkConfig } from '../types'
 import { TEMPLATE_PRESETS } from '../templates/presets'
 
 function createDefaultTag(style: TagStyle): Tag {
@@ -45,6 +45,7 @@ interface ProjectState {
 
   updateTag: (itemId: string, tagId: string, updates: Partial<Tag>) => void
   setPriceText: (itemId: string, text: string) => void
+  rotateItem: (itemId: string, direction: 'cw' | 'ccw') => void
 
   applyStyleToAll: (style: TagStyle) => void
   applyStyleToOne: (itemId: string, style: TagStyle) => void
@@ -82,6 +83,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           imageUrl: url,
           imageWidth: width,
           imageHeight: height,
+          rotation: 0,
           tags: [createDefaultTag(template.defaultTagStyle)],
         }
         newItems.push(item)
@@ -143,6 +145,19 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                 ...item,
                 tags: item.tags.map((tag) => (tag.type === 'price' ? { ...tag, text } : tag)),
               },
+        ),
+      },
+    }))
+  },
+
+  rotateItem: (itemId, direction) => {
+    set((state) => ({
+      project: {
+        ...state.project,
+        items: state.project.items.map((item) =>
+          item.id !== itemId
+            ? item
+            : { ...item, rotation: (((item.rotation + (direction === 'cw' ? 90 : -90)) % 360) + 360) % 360 as Rotation },
         ),
       },
     }))
