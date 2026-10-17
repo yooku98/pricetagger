@@ -6,6 +6,8 @@ each one, batch-apply a style across the whole catalog, and export
 flattened PNGs — sized for Instagram Feed, WhatsApp Status, or original
 resolution.
 
+**Live demo:** https://yooku98.github.io/pricetagger/
+
 No accounts. No database. No server. Your product photos and prices never
 leave your browser.
 
